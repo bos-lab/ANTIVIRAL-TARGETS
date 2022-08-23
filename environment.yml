@@ -1,0 +1,11 @@
+name: resp2virus-env
+
+channels:
+  - bioconda
+dependencies:
+  - subread
+  - snakemake
+  - faqcs
+  - hisat2
+  - samtools
+

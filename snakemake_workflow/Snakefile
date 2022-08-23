@@ -1,0 +1,37 @@
+FEATS = ["CDS", "rRNA", "tRNA", "exon", "gene", "transcript"]
+rule qc_reads:
+    input:
+        fq1 = "data/{sample}_1.fastq",
+        fq2 = "data/{sample}_2.fastq"
+    output:
+        expand("qc_reads/{{sample}}/QC{ext}", ext=[".1.trimmed.fastq", ".2.trimmed.fastq"])
+    params:
+        dir="qc_reads/{sample}"
+    shell:
+        "FaQCs -min_L 50 -n 50 -t 4 -d {params.dir} -1 {input.fq1} -2 {input.fq2}"
+
+rule read_map:
+    input:
+        fq1 = "qc_reads/{sample}/QC.1.trimmed.fastq",
+        fq2 = "qc_reads/{sample}/QC.2.trimmed.fastq",
+    output:
+         "mapped_reads/{sample}.bam"
+    params:
+        idx = "data/grch38/genome"
+    shell:
+        "hisat2 -x {params.idx} -1 {input.fq1} -2 {input.fq2} |  samtools view -Sbh -o {output} "
+    
+rule fcount_genes:
+    input:
+        "mapped_reads/{sample}.bam"
+    output:
+        "fcount_dir/{sample}_gene_fcount.tsv"
+        #  expand("fcounts/{{sample}}/{{sample}}_count_{ext}", ext=["CDS", "rRNA", "tRNA", "exon", "gene", "transcript"])
+    params:
+        gtf = "data/genome.gtf"
+    shell:
+        "featureCounts -a {params.gtf} -g gene_id -t gene -o {output} {input}"
+    
+# rule calc_metrics:
+    
+    
