@@ -25,7 +25,6 @@ def cli():
 
 def tpm(in_file, out_file):
     """A function that calculates TPM for every row"""
-    print(in_file)
     with open(in_file) as csv_file:
         next(csv_file)
         next(csv_file)
@@ -49,7 +48,8 @@ def tpm(in_file, out_file):
     with open('.intermediate_file.csv') as int_file:
         csv_reader2 = csv.reader(int_file, delimiter=",")
         with open(out_file, mode='w') as out_f:
-            out_writer = csv.writer(out_f, delimiter=',')
+            out_writer = csv.writer(out_f, delimiter='\t')
+            out_writer.writerow(["id", "TPM"])
             for row in csv_reader2:
                 tpm = float(row[7])/per_mil_scale
                 row.append(tpm)
@@ -58,3 +58,5 @@ def tpm(in_file, out_file):
            
 if __name__ == "__main__":
     cli()
+    
+#TODO after few runs manually test if the TPM calculations is correct.
