@@ -1,37 +1,71 @@
 FEATS = ["CDS", "rRNA", "tRNA", "exon", "gene", "transcript"]
+
+rule sra_prefetch:
+    output:
+        "raw_srr/{srr}.sra"
+    params:
+        "{srr} --max-size 50GB -O raw_srr/"
+    log:
+        "raw_srr/{srr}_prefetch.log"
+    shell:
+        """
+        prefetch {params} > {log} 2>&1
+        """
+
+rule fastqdump:
+    input:
+        "raw_srr/{srr}.sra"
+    output:
+        expand("raw_srr/{{srr}}{ext}", ext=["_pass_1.fastq.gz", "_pass_2.fastq.gz"])
+    log:
+        "raw_srr/{srr}.log"
+    shell:
+        """
+        fastq-dump --gzip --clip --read-filter pass --outdir raw_srr/ --skip-technical --split-3 {input} > {log} 2>&1 
+        """
+
 rule qc_reads:
     input:
-        fq1 = "data/{sample}_1.fastq",
-        fq2 = "data/{sample}_2.fastq"
+        fq1 = "raw_srr/{srr}_pass_1.fastq.gz",
+        fq2 = "raw_srr/{srr}_pass_2.fastq.gz"
     output:
-        expand("qc_reads/{{sample}}/QC{ext}", ext=[".1.trimmed.fastq", ".2.trimmed.fastq"])
+        expand("qc_reads/{{srr}}/QC{ext}", ext=[".1.trimmed.fastq", ".2.trimmed.fastq"])
     params:
-        dir="qc_reads/{sample}"
+        dir="qc_reads/{srr}"
+    threads: 12
     shell:
-        "FaQCs -min_L 50 -n 50 -t 4 -d {params.dir} -1 {input.fq1} -2 {input.fq2}"
+        """
+        FaQCs -min_L 50 -n 50 -t {threads} -d {params.dir} -1 {input.fq1} -2 {input.fq2}
+        """
 
 rule read_map:
     input:
-        fq1 = "qc_reads/{sample}/QC.1.trimmed.fastq",
-        fq2 = "qc_reads/{sample}/QC.2.trimmed.fastq",
+        fq1 = "qc_reads/{srr}/QC.1.trimmed.fastq",
+        fq2 = "qc_reads/{srr}/QC.2.trimmed.fastq",
     output:
-         "mapped_reads/{sample}.bam"
+         "mapped_reads/{srr}.bam"
     params:
-        idx = "data/grch38/genome"
+        idx = "/panfs/biopan04/scratch-migun/ANTIVIRAL-TARGETS/data/grch38/genome"
+    threads: 12
     shell:
-        "hisat2 -x {params.idx} -1 {input.fq1} -2 {input.fq2} |  samtools view -Sbh -o {output} "
-    
+        "hisat2 -p {threads} -x {params.idx} -1 {input.fq1} -2 {input.fq2} |  samtools view -Sbh -o {output} "
+
 rule fcount_genes:
     input:
-        "mapped_reads/{sample}.bam"
+        "mapped_reads/{srr}.bam"
     output:
-        "fcount_dir/{sample}_gene_fcount.tsv"
-        #  expand("fcounts/{{sample}}/{{sample}}_count_{ext}", ext=["CDS", "rRNA", "tRNA", "exon", "gene", "transcript"])
+        "fcount_dir/{srr}_gene_fcount.tsv"
     params:
-        gtf = "data/genome.gtf"
+        gtf = "/panfs/biopan04/scratch-migun/ANTIVIRAL-TARGETS/data/genome.gtf"
     shell:
         "featureCounts -a {params.gtf} -g gene_id -t gene -o {output} {input}"
-    
-# rule calc_metrics:
-    
-    
+
+rule calc_tpm:
+    input:
+        "fcount_dir/{srr}_gene_fcount.tsv"
+    output:
+        "tpms/{srr}_gene_tpm.tsv"
+    shell:
+        "python /panfs/biopan04/scratch-migun/ANTIVIRAL-TARGETS/scripts/rna-score-calc.py tpm -i {input} -o {output}"
+
+# Replace full path with YML files
