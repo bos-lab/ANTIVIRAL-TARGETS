@@ -1,1 +1,15 @@
 .DS_Store
+*.ss
+*.ht*
+*.snakemake/
+S*.log
+*.sra
+*.fastq
+*.gz
+*.tmp
+tools/*
+*.gtf
+*.pdf
+sftp.json
+make_grch38.sh
+*.sra*
