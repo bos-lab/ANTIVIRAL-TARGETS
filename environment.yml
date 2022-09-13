@@ -8,4 +8,8 @@ dependencies:
   - faqcs
   - hisat2
   - samtools
-
+  - pip
+  - sra-tools
+  -pip:
+    - click
+  
