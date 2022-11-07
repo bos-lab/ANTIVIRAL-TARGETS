@@ -1,5 +1,4 @@
 FEATS = ["CDS", "rRNA", "tRNA", "exon", "gene", "transcript"]
-READS = config["READS"]
 
 rule sra_prefetch:
     output:
@@ -27,8 +26,8 @@ rule fastqdump:
 
 rule paired_reads_qc:
     input:
-        fq1 = "raw_srr/{srr}_pass_1.fastq.gz"
-        fq2 = "raw_srr/{srr}_pass_2.fastq.gz"
+        fq1 = "raw_srr/{srr}_pass_1.fastq.gz",
+        fq2 = "raw_srr/{srr}_pass_2.fastq.gz",
     output:
         expand("qc_reads/{{srr}}/QC{ext}", ext=[".1.trimmed.fastq", ".2.trimmed.fastq"])
     params:
@@ -65,7 +64,7 @@ rule single_read_map:
     input:
         fq = "qc_reads/{srr}/QC.unpaired.trimmed.fastq",
     output:
-         "mapped_reads/{srr}_single.bam"
+         "mapped_reads/{srr}_unpaired.bam"
     params:
         idx = "/panfs/biopan04/scratch-migun/ANTIVIRAL-TARGETS/data/grch38/genome"
     threads: 12
@@ -75,9 +74,9 @@ rule single_read_map:
 
 rule single_fcount_genes:
     input:
-        "mapped_reads/{srr}_single.bam"
+        "mapped_reads/{srr}_unpaired.bam"
     output:
-        "fcount_dir/{srr}_single_gene_fcount.tsv"
+        "fcount_dir/{srr}_unpaired_fcount.tsv"
     params:
         gtf = "/panfs/biopan04/scratch-migun/ANTIVIRAL-TARGETS/data/genome.gtf"
     shell:
@@ -103,9 +102,9 @@ rule calc_tpm:
 
 rule single_calc_tpm:
     input:
-        "fcount_dir/{srr}_gene_fcount.tsv"
+        "fcount_dir/{srr}_unpaired_fcount.tsv"
     output:
-        "tpms/{srr}_single_tpm.tsv"
+        "tpms/{srr}_unpaired_tpm.tsv"
     shell:
         "python /panfs/biopan04/scratch-migun/ANTIVIRAL-TARGETS/scripts/rna-score-calc.py tpm -i {input} -o {output}"
 
