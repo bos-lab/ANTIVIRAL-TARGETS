@@ -24,6 +24,19 @@ rule fastqdump:
         fastq-dump --gzip --clip --read-filter pass --outdir raw_srr/ --skip-technical --split-3 {input} > {log} 2>&1 
         """
 
+
+rule single_fastqdump:
+    input:
+        "raw_srr/{srr}.sra"
+    output:
+       "raw_srr/{srr}_pass.fastq.gz"
+    log:
+        "raw_srr/{srr}.log"
+    shell:
+        """
+        fastq-dump --gzip --clip --read-filter pass --outdir raw_srr/ --skip-technical --split-3 {input} > {log} 2>&1 
+        """
+
 rule paired_reads_qc:
     input:
         fq1 = "raw_srr/{srr}_pass_1.fastq.gz",
@@ -40,7 +53,7 @@ rule single_reads_qc:
     input:
         fq = "raw_srr/{srr}_pass.fastq.gz"
     output:
-        expand("qc_reads/{{srr}}/QC{ext}", ext=[".unpaired.trimmed.fastq"])
+        "qc_reads/{srr}/QC.unpaired.trimmed.fastq"
     params:
         dir="qc_reads/{srr}"
     threads: 12
@@ -52,7 +65,7 @@ rule paired_read_map:
         fq1 = "qc_reads/{srr}/QC.1.trimmed.fastq",
         fq2 = "qc_reads/{srr}/QC.2.trimmed.fastq",
     output:
-         "mapped_reads/{srr}.bam"
+         "mapped_reads/{srr}_paired.bam"
     params:
         idx = "/panfs/biopan04/scratch-migun/ANTIVIRAL-TARGETS/data/grch38/genome"
     threads: 12
@@ -84,7 +97,7 @@ rule single_fcount_genes:
 
 rule fcount_genes:
     input:
-        "mapped_reads/{srr}.bam"
+        "mapped_reads/{srr}_paired.bam"
     output:
         "fcount_dir/{srr}_gene_fcount.tsv"
     params:
