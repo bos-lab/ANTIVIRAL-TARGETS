@@ -1,0 +1,124 @@
+---
+title: "IV_infection"
+author: "Nelson Ruth"
+date: '2022-12-19'
+output: html_document
+---
+
+This script takes a list of human genes, then uses bioMart to convert the genes from ensembl format to NCBI format. Once formatted, KEGGREST finds all the pathways each gene corresponds to. Input is a list of human genes in ensembl format. the first output file contains each gene in both ensembl and NCBI format and all the pathways that gene has a role in. The second output file shows the frequency of pathways, determined by how many times a gene was found to play a role in that pathway. I will add to this file as the project develops. Note: to use bioMart and KEGGREST, you will need to either use a proxy or be off of LANL WiFi. 
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r, install packages}
+suppressMessages(library(tidyverse))
+suppressMessages(library(ggplot2))
+suppressMessages(library(dplyr))
+library(KEGGREST)
+library(biomaRt)
+suppressMessages(library(xlsx))
+suppressMessages(library(dplyr))
+suppressMessages(library(purrr))
+#suppressMessages(library(mygene))
+suppressMessages(library(xlsx))
+suppressMessages(library(readxl))
+suppressMessages(library(stringr))
+
+```
+
+```{r, importing data}
+###disregard the SRR stuff for now
+SRR13858418 <- read.table("/Users/nruth/Desktop/Migun/IVinfection/PRJNA706691/tpms/SRR13858418_gene_tpm.tsv", header=TRUE, row.names = NULL, sep = "\t")
+SRR13858422 <- read.table("/Users/nruth/Desktop/Migun/IVinfection/PRJNA706691/tpms/SRR13858422_gene_tpm.tsv", header=TRUE, row.names = NULL, sep = "\t")
+SRR13858423 <- read.table("/Users/nruth/Desktop/Migun/IVinfection/PRJNA706691/tpms/SRR13858423_gene_tpm.tsv", header=TRUE, row.names = NULL, sep = "\t")
+
+all_list <- list(SRR13858418, SRR13858422, SRR13858423)
+df_all <- all_list %>% purrr::reduce(full_join, by="id")
+
+colnames(df_all) <- c("gene_id", "PRJNA706691_SRR13858418", "PRJNA706691_SRR13858422", "PRJNA706691_SRR13858423")
+row.names(df_all) <- df_all$gene_id
+df_all[1] <- NULL
+###
+
+#had to copy the sheet to a new file, was unable to import it from the full pathways file
+pathfile <- read_excel("/Users/nruth/Desktop/Migun/IVinfection/w.xlsx", sheet=1)
+```
+
+```{r, KEGG analysis}
+#removing genes containing all zeroes reduced num genes from 60,675 to 26,569 genes (57% reduction)
+#df_all <- df_all[as.logical(rowSums(df_all != 0)),]
+
+mart <- useMart('ENSEMBL_MART_ENSEMBL')
+mart <- useDataset('hsapiens_gene_ensembl', mart)
+
+my_genes <- rownames(pathfile[1:nrow(df_all),])
+
+lookup <- getBM(
+  mart = mart,
+  attributes = c("ensembl_gene_id","entrezgene_id"),
+  #filter = "ensembl_gene_id",
+  values = my_genes,
+  uniqueRows = TRUE)
+lookup
+
+paths <- lookup
+
+paths$ncbi_gene_id <- sub("^", "hsa:", paths$entrezgene_id)
+paths <- paths[c(1,3)]
+paths <- na.omit(paths)
+
+paths$pathways <- NA
+
+
+test <- paths
+
+#this took about 4 hours to run on 35k genes. I think KEGGREST limits queries/sec to avoid crashes
+for (i in 1:nrow(test)){
+  print(test[i,]$ncbi_gene_id)
+  x <- tryCatch(full_entry <- keggGet(test[i,]$ncbi_gene_id), error=function(e) e)
+  if(inherits(x, "error")) next
+  tryCatch(test[i,]$pathways <- list(paste(full_entry[[1]]$PATHWAY)), error=function(e) e)
+  if(inherits(x, "error")) next
+}
+
+#write.table(test, file = "pathways_rough.tsv", row.names=TRUE, sep="\t")
+
+#pathway column is quite messy, below code cleans it so each pathway the gene mapped to is separated by a ;
+test_2 <- test
+test_2[] <- lapply(test_2, gsub, pattern=", ", replacement='')
+test_2[] <- lapply(test_2, gsub, pattern=" ", replacement='_')
+test_2[] <- lapply(test_2, gsub, pattern="c\\(", replacement='')
+test_2[] <- lapply(test_2, gsub, pattern=")", replacement='')
+test_2[] <- lapply(test_2, gsub, pattern='""', replacement=';')
+test_2[] <- lapply(test_2, gsub, pattern='"', replacement='')
+test_2[] <- lapply(test_2, gsub, pattern='character\\(0', replacement='NA')
+
+#write gene/pathway file out to avoid rerunning
+write.table(test_2, file='genes_pathways.tsv', quote=FALSE, sep='\t', col.names = FALSE, row.names = FALSE)
+
+#write the pathway file out to avoid rerunning
+#write.xlsx(test_2,"/Users/nruth/Desktop/Migun/IVinfection/pathways.xlsx")
+
+#the code below creates a 2-column file with each pathway and the frequency of that pathway
+paths_only <- as.data.frame(str_split_fixed(test_2$pathways, ';', 50))
+#paths_only[] <- lapply(paths_only, gsub, pattern=' ', replacement='NA')
+paths_only[paths_only == "" | paths_only == ""] <- NA
+#<- as.data.frame(paths_only[paths_only == ""] <-  NA)
+
+paths_only_1_column <- data.frame(path = unlist(paths_only))
+paths_only_1_column[] <- lapply(paths_only_1_column, gsub, pattern='NA', replacement=NA)
+
+paths_only_1_column <- na.omit(paths_only_1_column)
+paths_only_counts <- paths_only_1_column %>% dplyr::add_count(paths_only_1_column$path) %>% dplyr::arrange(desc(n))
+paths_only_counts <- unique(paths_only_counts)
+paths_only_counts[2] <- NULL
+paths_counts_final <- paths_only_counts
+
+write.table(paths_counts_final, file='pathway_counts.tsv', quote=FALSE, sep='\t', col.names = FALSE, row.names = FALSE)
+
+```
+
+
+
