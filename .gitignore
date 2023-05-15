@@ -5,7 +5,7 @@
 S*.log
 *.sra
 *.fastq
-*.gz
+# *.gz
 *.tmp
 tools/*
 *.gtf
@@ -13,3 +13,6 @@ tools/*
 sftp.json
 make_grch38.sh
 *.sra*
+*gene_tpm.tsv
+data/grch38_genome.tar.gz
+data/DAVIDKnowledgebase/*.txt
