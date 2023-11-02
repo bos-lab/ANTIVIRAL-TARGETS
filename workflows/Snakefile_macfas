@@ -67,7 +67,8 @@ rule paired_read_map:
     output:
          "mapped_reads/{srr}_paired.bam"
     params:
-        idx = "/panfs/biopan04/scratch-migun/ANTIVIRAL-TARGETS/data/grch38/genome"
+        idx = "/panfs/biopan04/scratch-migun/ANTIVIRAL-TARGETS/data/grcMFA1912RKSv2/genome"
+        
     threads: 12
     shell:
         "hisat2 -p {threads} -x {params.idx} -1 {input.fq1} -2 {input.fq2} |  samtools view -Sbh -o {output} "
@@ -79,7 +80,7 @@ rule single_read_map:
     output:
          "mapped_reads/{srr}_unpaired.bam"
     params:
-        idx = "/panfs/biopan04/scratch-migun/ANTIVIRAL-TARGETS/data/grch38/genome"
+        idx = "/panfs/biopan04/scratch-migun/ANTIVIRAL-TARGETS/data/grcMFA1912RKSv2/genome"
     threads: 12
     shell:
         "hisat2 -p {threads} -x {params.idx} -U {input.fq}|  samtools view -Sbh -o {output} "
@@ -91,7 +92,7 @@ rule single_fcount_genes:
     output:
         "fcount_dir/{srr}_unpaired_fcount.tsv"
     params:
-        gtf = "/panfs/biopan04/scratch-migun/ANTIVIRAL-TARGETS/data/genome.gtf"
+        gtf = "/panfs/biopan04/scratch-migun/ANTIVIRAL-TARGETS/data/genome_MFA1912RKSv2.gtf"
     shell:
         "featureCounts -a {params.gtf} -s 0 -g gene_id -t gene -o {output} {input}"
 
@@ -101,7 +102,7 @@ rule fcount_genes:
     output:
         "fcount_dir/{srr}_gene_fcount.tsv"
     params:
-        gtf = "/panfs/biopan04/scratch-migun/ANTIVIRAL-TARGETS/data/genome.gtf"
+        gtf = "/panfs/biopan04/scratch-migun/ANTIVIRAL-TARGETS/data/genome_MFA1912RKSv2.gtf"
     shell:
         "featureCounts -a {params.gtf} -g gene_id -t gene -o {output} {input}"
 
@@ -121,4 +122,3 @@ rule single_calc_tpm:
     shell:
         "python /panfs/biopan04/scratch-migun/ANTIVIRAL-TARGETS/scripts/rna-score-calc.py tpm -i {input} -o {output}"
 
-# Replace full path with YML files
