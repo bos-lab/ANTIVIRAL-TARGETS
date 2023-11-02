@@ -7,8 +7,14 @@
     - Path to TPM table in this:
 
 - Human cell lines infected with SARS-CoV-2 ().
-    - Path to metadata table in this repo:
-    - Path to TPM table in this repo:
+    - Path to metadata table in this repo: results/covid/covid_experimental_metadata.csv
+    - Path to TPM table in this repo: results/covid/covid_experimental_metadata.csv
+ 
+-- Mouse and monkey cell lines infected with Ebola virus ().
+    - Path to metadata table in this repo: results/ebola/ebola_experiment_metadata.csv
+    - Path to TPM tables in this repo: results/ebola/filtered_TPM_macfas.csv.gz
+                                       results/ebola/filtered_TPM_macmul.csv.gz
+                                       results/ebola/filtered_TPM_musmus.csv.gz
 
 
 
