@@ -18,8 +18,8 @@
 
 
 ## Methods
-### 1. Process relevant human transcriptome data using in-house transcriptomic pipeline. See below
-
+### 1. Process relevant human, monkey and mouse transcriptome data using in-house transcriptomic pipeline. Pipeline has multiple outputs, including transcripts per million (TPM) See below
+### 2. Filter TPMs to remove all unexpressed genes using in house R pipeline. 
 
 ## Transcriptome Workflow description
 - Snakemake  workflow.
